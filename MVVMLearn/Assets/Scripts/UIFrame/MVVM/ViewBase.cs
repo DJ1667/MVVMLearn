@@ -5,7 +5,7 @@ using DG.Tweening;
 using UnityEngine;
 
 [RequireComponent(typeof(CanvasGroup))]
-public class ViewBase<T> : MonoBehaviour, IView<T> where T : ViewModelBase
+public class ViewBase<T> : MonoBehaviour, IView where T : ViewModelBase, new()
 {
     private CanvasGroup _canvasGroup;
 
@@ -25,54 +25,84 @@ public class ViewBase<T> : MonoBehaviour, IView<T> where T : ViewModelBase
     private readonly BindableProperty<T> ViewModelProperty = new BindableProperty<T>();
 
     /// <summary>
+    /// 显示之前的回调
+    /// </summary>
+    private Action ShowStartAction { get; set; }
+
+    /// <summary>
     /// 显示之后的回调
     /// </summary>
-    private Action ShowedAction { get; set; }
+    private Action ShowFinishAction { get; set; }
+
+    /// <summary>
+    /// 隐藏之前的回调
+    /// </summary>
+    private Action HideStartAction { get; set; }
 
     /// <summary>
     /// 隐藏之后的回调
     /// </summary>
-    private Action HiddenAction { get; set; }
+    private Action HideFinishAction { get; set; }
 
-    public T BindingContext
+    public T Context
     {
-        get { return ViewModelProperty.Value; }
-        set
-        {
-            if (!_isInitialized)
-            {
-                OnInitialized();
-                _isInitialized = true;
-            }
-
-            //触发OnValueChanged事件
-            ViewModelProperty.Value = value;
-        }
+        get => BindingContext as T;
     }
 
-    public void Show(bool immediate = false, Action action = null)
+    public ViewModelBase BindingContext
     {
-        if (action != null)
+        get => ViewModelProperty.Value;
+        set => ViewModelProperty.Value = value as T;
+    }
+
+    public GameObject SelfGameObject
+    {
+        get => gameObject;
+    }
+
+    /// <summary>
+    /// 只在实例化后执行一次
+    /// </summary>
+    public void Initialize()
+    {
+        if (!_isInitialized)
         {
-            ShowedAction += action;
+            OnInitialized();
+            _isInitialized = true;
+        }
+
+        //触发OnValueChanged事件
+        ViewModelProperty.Value = new T();
+    }
+
+    public void Show(bool immediate = false, Action startAction = null, Action finishAction = null)
+    {
+        if (startAction != null)
+        {
+            ShowStartAction += startAction;
+        }
+
+        if (finishAction != null)
+        {
+            ShowFinishAction += finishAction;
         }
 
         OnShowStart(immediate);
     }
 
-    public void Hide(bool immediate = false, Action action = null)
+    public void Hide(bool immediate = false, Action startAction = null, Action finishAction = null)
     {
-        if (action != null)
+        if (startAction != null)
         {
-            HiddenAction += action;
+            HideStartAction += startAction;
+        }
+
+        if (finishAction != null)
+        {
+            HideFinishAction += finishAction;
         }
 
         OnHideStart(immediate);
-    }
-
-    public void Destroy()
-    {
-        Destroy(gameObject);
     }
 
     /// <summary>
@@ -88,6 +118,7 @@ public class ViewBase<T> : MonoBehaviour, IView<T> where T : ViewModelBase
         gameObject.SetActive(true);
 
         BindingContext.OnShowStart();
+        ShowStartAction?.Invoke();
 
         if (immediate)
         {
@@ -104,12 +135,13 @@ public class ViewBase<T> : MonoBehaviour, IView<T> where T : ViewModelBase
     protected virtual void OnShowFinish()
     {
         BindingContext.OnShowFinish();
-        ShowedAction?.Invoke();
+        ShowFinishAction?.Invoke();
     }
 
     protected virtual void OnHideStart(bool immediate)
     {
         BindingContext.OnHideStart();
+        HideStartAction?.Invoke();
 
         if (immediate)
         {
@@ -126,7 +158,7 @@ public class ViewBase<T> : MonoBehaviour, IView<T> where T : ViewModelBase
     protected virtual void OnHideFinish()
     {
         BindingContext.OnHideFinish();
-        HiddenAction?.Invoke();
+        HideFinishAction?.Invoke();
     }
 
     protected virtual void OnDestroy()

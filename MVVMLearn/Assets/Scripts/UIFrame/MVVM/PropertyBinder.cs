@@ -4,6 +4,8 @@ using System.Reflection;
 
 public class PropertyBinder<T> where T : ViewModelBase
 {
+    #region 优点：只需在初始化时绑定信息，不用关心什么时候移除监听，内部会自动处理。 缺点：只能绑定ViewModel中定义的响应式属性，无法对class类型的响应式属性内部的属性进行监听。
+
     private delegate void BindHandler(T viewModel);
 
     private delegate void UnBindHandler(T viewModel);
@@ -59,4 +61,21 @@ public class PropertyBinder<T> where T : ViewModelBase
             }
         }
     }
+
+    #endregion
+
+
+    #region 优点：可以精确到任何一个响应式属性。 缺点：需要自己手动管理添加和删除，进入界面添加，退出界面删除。
+
+    public void Add<TProperty>(BindableProperty<TProperty> bp, BindableProperty<TProperty>.ValueChangedHandler valueChangedHandler)
+    {
+        bp.OnValueChanged += valueChangedHandler;
+    }
+
+    public void Remove<TProperty>(BindableProperty<TProperty> bp, BindableProperty<TProperty>.ValueChangedHandler valueChangedHandler)
+    {
+        bp.OnValueChanged -= valueChangedHandler;
+    }
+
+    #endregion
 }

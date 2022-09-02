@@ -1,6 +1,7 @@
 public class ViewModelBase
 {
     private bool _isInitialized;
+    public float Timer { get; set; } //存活时间
 
     public ViewModelBase ParentViewModel { get; set; }
 
